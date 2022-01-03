@@ -106,10 +106,24 @@ To get a local copy up and running follow these simple example steps.
 
 ## Usage
 
-- Running the app on a simulator
+- Running the app - start Metro
+
   ```sh
   npx react-native start
   ```
+
+- then, iOS simulator
+  ```sh
+  cd ios && pod install
+  cd ..
+  npx react-native run-ios
+  ```
+- or Android simulator
+
+  ```sh
+  npx react-native run-android
+  ```
+
   _Please refer to the [React Native Documentation](https://reactnative.dev/docs/environment-setup) for more details_
 
 <p align="right">(<a href="#top">back to top</a>)</p>
