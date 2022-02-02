@@ -5,40 +5,38 @@ import HomeScreen from './app/screens/HomeScreen';
 
 export default function App() {
   const [counter, setCounter] = useState(0);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [loading, setLoading] = useState(false);
 
+  const lastUpdated = useRef(new Date());
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    getData();
-  });
-
-  useEffect(() => {
+    setLoading(true);
     getData();
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (
         appState.current.match(/inactive|background/) &&
         nextAppState === 'active'
       ) {
-        console.log('App has come to the foreground!');
         const today = new Date();
-        console.log(today, lastUpdated);
-        if (calculateDays(lastUpdated, today) >= 2) {
+        if (calculateDays(lastUpdated.current, today) >= 2) {
           Alert.alert("You didn't do your LeetCode", 'Get back to work scum', [
             'OK',
           ]);
           setCounter(0);
-          setLastUpdated(today);
-          storeData(0, today);
+          lastUpdated.current = today;
+          console.log('lastUpdated', lastUpdated.current);
+          storeData(0, lastUpdated.current);
         }
       }
 
       appState.current = nextAppState;
     });
-
+    setLoading(false);
     return () => {
       subscription.remove();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Async Storage
@@ -58,11 +56,11 @@ export default function App() {
       if (storedCounter !== null && storedDate !== null) {
         // eslint-disable-next-line radix
         setCounter(parseInt(storedCounter));
-        setLastUpdated(Date.parse(storedDate));
+        lastUpdated.current = Date.parse(storedDate);
       } else {
         const today = new Date();
         setCounter(0);
-        setLastUpdated(today);
+        lastUpdated.current = today;
         storeData(0, today);
       }
     } catch (e) {
@@ -72,9 +70,9 @@ export default function App() {
 
   const incrementCounter = () => {
     const today = new Date();
-    if (calculateDays(lastUpdated, today) >= 1 || counter === 0) {
+    if (calculateDays(lastUpdated.current, today) >= 1 || counter === 0) {
       setCounter(counter + 1);
-      setLastUpdated(today);
+      lastUpdated.current = today;
       storeData(counter + 1, today);
     } else {
       Alert.alert("You've already done LeetCode today", 'Good work chump', [
@@ -84,13 +82,17 @@ export default function App() {
   };
 
   const calculateDays = (date1, date2) => {
-    console.log(date2, ' - ', date1);
     const diff = Math.abs(date2 - date1);
-    console.log('diff', diff);
     const daysDiff = Math.floor(diff / (1000 * 60 * 60 * 24));
     console.log('daysDiff', daysDiff);
     return daysDiff;
   };
 
-  return <HomeScreen counter={counter} incrementCounter={incrementCounter} />;
+  return (
+    <HomeScreen
+      counter={counter}
+      incrementCounter={incrementCounter}
+      loading={loading}
+    />
+  );
 }

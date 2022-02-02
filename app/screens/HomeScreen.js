@@ -1,7 +1,7 @@
 import React from 'react';
 import {StyleSheet, Image, Text, View, TouchableOpacity} from 'react-native';
 
-const HomeScreen = ({counter, incrementCounter}) => {
+const HomeScreen = ({counter, incrementCounter, loading}) => {
   return (
     <View style={styles.container}>
       <View style={styles.heading}>
@@ -13,7 +13,7 @@ const HomeScreen = ({counter, incrementCounter}) => {
         />
         <Text style={styles.headingText}>Prison</Text>
       </View>
-      <Text style={styles.counter}>{counter}</Text>
+      <Text style={styles.counter}>{loading ? 'Loading...' : counter}</Text>
       <TouchableOpacity onPress={incrementCounter} style={styles.btn}>
         <View style={styles.btnView}>
           <Text style={styles.plus}>+</Text>
