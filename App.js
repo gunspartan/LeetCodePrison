@@ -1,52 +1,51 @@
-import React, {useState, useEffect} from 'react';
-import {Alert} from 'react-native';
+import React, {useState, useEffect, useRef} from 'react';
+import {Alert, AppState} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Midnight from 'react-native-midnight';
 import HomeScreen from './app/screens/HomeScreen';
 
 export default function App() {
   const [counter, setCounter] = useState(0);
-  const [lastUpdated, setLastUpdated] = useState(new Date().getDate());
+  const [loading, setLoading] = useState(false);
+
+  const lastUpdated = useRef(new Date());
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
+    setLoading(true);
     getData();
-  });
-
-  useEffect(() => {
-    const listener = Midnight.addListener(() => {
-      console.log('New day');
-      const today = new Date().getDate();
-      console.log(today, lastUpdated);
-      if (today - lastUpdated > 1) {
-        Alert.alert("You didn't do your LeetCode", 'Get back to work scum', [
-          'OK',
-        ]);
-        setCounter(0);
-        setLastUpdated(today);
-        storeData(0, today);
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        const today = new Date();
+        if (calculateDays(lastUpdated.current, today) >= 2) {
+          Alert.alert("You didn't do your LeetCode", 'Get back to work scum', [
+            'OK',
+          ]);
+          setCounter(0);
+          lastUpdated.current = today;
+          console.log('lastUpdated', lastUpdated.current);
+          storeData(0, lastUpdated.current);
+        }
       }
-    });
-    return () => listener.remove();
-  }, [lastUpdated]);
 
-  // RESET LOGIC
-  // if (todayDate - lastUpdated > 1) {
-  //   console.log('reseting counter...');
-  //   Alert.alert("You didn't do your LeetCode", 'Get Back to work scum.', [
-  //     'OK',
-  //   ]);
-  //   setCounter(0);
-  //   storeData(counter, todayDate);
-  // }
+      appState.current = nextAppState;
+    });
+    setLoading(false);
+    return () => {
+      subscription.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Async Storage
   const storeData = async (newCounter, newDate) => {
     try {
-      console.log(`storeDate >> newCounter: ${newCounter} newDate: ${newDate}`);
       await AsyncStorage.setItem('counter', newCounter.toString());
       await AsyncStorage.setItem('lastUpdated', newDate.toString());
     } catch (e) {
-      console.log(e);
+      console.error(e);
     }
   };
 
@@ -54,31 +53,26 @@ export default function App() {
     try {
       const storedCounter = await AsyncStorage.getItem('counter');
       const storedDate = await AsyncStorage.getItem('lastUpdated');
-      console.log(
-        `getDate >> storedCounter: ${storedCounter} storedDate: ${storedDate}`,
-      );
       if (storedCounter !== null && storedDate !== null) {
         // eslint-disable-next-line radix
         setCounter(parseInt(storedCounter));
-        // eslint-disable-next-line radix
-        setLastUpdated(parseInt(storedDate));
+        lastUpdated.current = Date.parse(storedDate);
       } else {
-        const today = new Date().getDate();
+        const today = new Date();
         setCounter(0);
-        setLastUpdated(today);
+        lastUpdated.current = today;
         storeData(0, today);
       }
     } catch (e) {
-      console.log(e);
+      console.error(e);
     }
   };
 
   const incrementCounter = () => {
-    const today = new Date().getDate();
-    if (today > lastUpdated || counter <= 0) {
-      console.log(`storeData(${counter},${today})`);
+    const today = new Date();
+    if (calculateDays(lastUpdated.current, today) >= 1 || counter === 0) {
       setCounter(counter + 1);
-      setLastUpdated(today);
+      lastUpdated.current = today;
       storeData(counter + 1, today);
     } else {
       Alert.alert("You've already done LeetCode today", 'Good work chump', [
@@ -87,5 +81,18 @@ export default function App() {
     }
   };
 
-  return <HomeScreen counter={counter} incrementCounter={incrementCounter} />;
+  const calculateDays = (date1, date2) => {
+    const diff = Math.abs(date2 - date1);
+    const daysDiff = Math.floor(diff / (1000 * 60 * 60 * 24));
+    console.log('daysDiff', daysDiff);
+    return daysDiff;
+  };
+
+  return (
+    <HomeScreen
+      counter={counter}
+      incrementCounter={incrementCounter}
+      loading={loading}
+    />
+  );
 }
